@@ -1,0 +1,5 @@
+*.syx
+*.PCG
+
+.zig-cache/
+zig-out/
