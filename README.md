@@ -1,0 +1,35 @@
+# PCG/SNG -> SysEx Converter 
+
+_For those who come after..._
+
+## Background
+
+I'm the owner of a Korg N364 synthesizer, which is a great piece of hardware but has a limited interface for interacting
+with the device via floppy disks and MIDI.
+
+Korg provides factory data in the form of proprietary PCG (Program, Combination, Global) and SNG (Song) files that be
+loaded into the synthesizer using the floppy drive (by design). In 2026, floppy disks aren't easy to find, also vintage
+floppy drives tend to fail over time. Which leaves us with two options:
+
+- Install a floppy drive emulator device (such as Gotek);
+- Transfer data over MIDI using SysEx messages.
+
+With regards to the floppy drive interface installed in N264/364, the ribbon cable is 26-pin, which is not compatible
+with the 34-pin interface used by most floppy drive emulators. So one would also need to buy a 26-to-34 pin adapter,
+which results in a higher cost. On top of it, disassembling the synth to access specifically the floppy drive connector
+is not trivial.
+
+As for the MIDI interface, it only requires a standard MIDI connection. There are many software tools available that
+can send SysEx messages over MIDI, making it easy to transfer data to the synthesizer.
+
+## Problem
+
+To be able to send PCG/SNG data to the synthesizer over MIDI, we need to convert the PCG/SNG files into SysEx messages
+first. There are some tools available, but they either do not support the N364 model, or are outdated and no longer
+maintained. Some of them are closed-source and paid, which makes it difficult to verify their correctness or modify
+them for our specific needs.
+
+## Solution
+
+This repository will contain a solution that converts Korg PCG/SNG files into SysEx message files, that can be sent to
+the Korg N364 using any compatible software (e.g. MIDI-OX, SysEx Librarian, etc.).
