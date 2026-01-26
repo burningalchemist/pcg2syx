@@ -31,5 +31,18 @@ them for our specific needs.
 
 ## Solution
 
-This repository will contain a solution that converts Korg PCG/SNG files into SysEx message files, that can be sent to
+This repository contains a solution that converts Korg PCG/SNG files into SysEx message files, that can be sent to
 the Korg N364 using any compatible software (e.g. MIDI-OX, SysEx Librarian, etc.).
+
+## Disclaimer
+
+This project is not affiliated with or endorsed by Korg Inc. All trademarks and copyrights belong to their respective
+owners. This project is for educational and personal use only. Please respect Korg's intellectual property rights and
+do not distribute copyrighted material without permission.
+
+Besides, use this software at your own risk. The author is not responsible for any damage or loss caused by using this
+software.
+
+## License
+
+This project is licensed under the AGPL v3 License. See the LICENSE file for details.
