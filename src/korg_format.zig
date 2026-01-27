@@ -1,26 +1,38 @@
 const std = @import("std");
 
+// Korg Product IDs
+const product_id = enum(u8) {
+    N_series = 0x35,
+    i_series = 0x39,
+    Triton = 0x50,
+    Karma = 0x5D,
+    Triton_LE = 0x63,
+    Kronos = 0x68,
+    Oasys = 0x70,
+    M3 = 0x75,
+};
+
 pub fn byteArraytoInt(input: []const u8) usize {
     var result: usize = 0;
-
     for (0..4) |index| {
-       // result += input[index] << index * 8;
         result += @as(usize, input[index]) << @intCast(index * 8);
     }
-
-    std.debug.print("Converted integer: {d}\n", .{result});
     return result;
 }
 
 fn isKorg(b: []const u8) bool {
-    return b[0] == 75 and b[1] == 79 and b[2] == 82 and b[3] == 71;
+    return std.mem.eql(u8, b[0..4], "KORG");
 }
 
-pub fn isKorg5(b: []const u8) bool {
-    std.debug.print("Checking Korg5 format for bytes: {s}\n", .{b});
-    return isKorg(b) and b[4] == 53;
-}
+pub fn isSupported(b: []const u8) bool {
+    if (!isKorg(b)) {
+        return false;
+    }
+    const id = @as(product_id, @enumFromInt(b[4]));
+    const result = switch (id) {
+        product_id.N_series => true,
+        else => false,
+    };
 
-pub fn isKorg9(b: []const u8) bool {
-    return isKorg(b) and b[4] == 57;
+    return result;
 }

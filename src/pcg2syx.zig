@@ -42,9 +42,11 @@ pub fn convert(src: []u8) ![]u8 {
     return dest;
 }
 
+// Extract global settings from the source data
 pub fn extractGlobal(src: []u8) ![]u8 {
     const allocator = std.heap.page_allocator;
     var extracted = try allocator.alloc(u8, 28);
+
     for (extracted[23..28]) |*byte| {
         byte.* = 0;
     }
@@ -191,7 +193,7 @@ pub fn createSysexFile(filename: []const u8, fileType: u8, data: []u8) !void {
     _ = try file.write(&sysexHeader);
 
     const convertedData = convert(data) catch {
-        std.debug.print("Error converting data for SysEx file: {s}\n", .{filename});
+        std.log.err("Error converting data for SysEx file: {s}\n", .{filename});
         return;
     };
     defer allocator.free(convertedData);

@@ -2,24 +2,25 @@ const std = @import("std");
 const korgFormat = @import("korg_format.zig");
 const pcg2syx = @import("pcg2syx.zig");
 
-// Read a file and return its contents if it is in Korg5 format
+// Read a file and return its contents if it's in a supported format
 pub fn readFile(path: []const u8) ![]u8 {
     const result: []u8 = undefined;
     const DATA_OFFSET: usize = 11;
 
+    std.log.info("Reading file: {s}", .{path});
     const file = try std.fs.cwd().openFile(path, .{ .mode = .read_only });
     defer file.close();
 
     const file_size = try file.getEndPos();
-    std.debug.print("File length is {} bytes\n", .{file_size});
 
     var header: [5]u8 = undefined;
     var header_reader = file.reader(&header);
     const contents = try header_reader.interface.readSliceShort(&header);
     try file.seekTo(header_reader.pos + DATA_OFFSET);
 
-    // Check if the format is Korg5
-    if (korgFormat.isKorg5(header[0..contents])) {
+    // Check if the format is supported
+    if (korgFormat.isSupported(header[0..contents])) {
+        std.log.info("Input file format: {s}", .{header[0..contents]});
         const allocator = std.heap.page_allocator;
         const position = try file.getPos();
 
