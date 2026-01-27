@@ -56,23 +56,132 @@ pub fn extractGlobal(src: []u8) ![]u8 {
     return extracted;
 }
 
+// Extract drum settings from the source data
+pub fn extractDrums(src: []u8) ![]u8 {
+    const allocator = std.heap.page_allocator;
+    var extracted = try allocator.alloc(u8, 1680);
+
+    for (0..240) |i| {
+        extracted[0 + 7 * i] = src[0 + 22 * i];
+        extracted[1 + 7 * i] = src[2 + 22 * i];
+        extracted[2 + 7 * i] = src[3 + 22 * i];
+        extracted[3 + 7 * i] = src[5 + 22 * i];
+        extracted[4 + 7 * i] = src[6 + 22 * i];
+        extracted[5 + 7 * i] = src[8 + 22 * i];
+        extracted[6 + 7 * i] = src[9 + 22 * i];
+    }
+
+    return extracted;
+}
+
+// Get global data section from the PCG file
 pub fn getGlobalData(data: []u8) ![]u8 {
     const allocator = std.heap.page_allocator;
+
     var addressGlobal: [4]u8 = undefined;
     var sizeGlobal: [4]u8 = undefined;
+
     @memcpy(addressGlobal[0..4], data[16..20]);
     @memcpy(sizeGlobal[0..4], data[20..24]);
+
     const globalSize = korgFormat.byteArraytoInt(sizeGlobal[0..4]);
     var global = try allocator.alloc(u8, globalSize);
     const address = korgFormat.byteArraytoInt(addressGlobal[0..4]) - 16;
+
     @memcpy(global[0..globalSize], data[address .. address + globalSize]);
+
     return extractGlobal(global[0..globalSize]);
 }
 
+// Get drum data section from the PCG file
+pub fn getDrumsData(data: []u8) ![]u8 {
+    const allocator = std.heap.page_allocator;
+
+    var addressDrumsA: [4]u8 = undefined;
+    var sizeDrumsA: [4]u8 = undefined;
+    var addressDrumsB: [4]u8 = undefined;
+    var sizeDrumsB: [4]u8 = undefined;
+
+    @memcpy(addressDrumsA[0..4], data[24..28]);
+    @memcpy(sizeDrumsA[0..4], data[28..32]);
+    @memcpy(addressDrumsB[0..4], data[48..52]);
+    @memcpy(sizeDrumsB[0..4], data[52..56]);
+
+    const sizeA = korgFormat.byteArraytoInt(sizeDrumsA[0..4]);
+    const sizeB = korgFormat.byteArraytoInt(sizeDrumsB[0..4]);
+
+    var drums = try allocator.alloc(u8, sizeA + sizeB);
+
+    const addressA = korgFormat.byteArraytoInt(addressDrumsA[0..4]) - 16;
+    const addressB = korgFormat.byteArraytoInt(addressDrumsB[0..4]) - 16;
+
+    @memcpy(drums[0..sizeA], data[addressA .. addressA + sizeA]);
+    @memcpy(drums[sizeA .. sizeA + sizeB], data[addressB .. addressB + sizeB]);
+
+    return extractDrums(drums[0 .. sizeA + sizeB]);
+}
+
+// Get program data section from the PCG file
+pub fn getProgramData(data: []u8) ![]u8 {
+    const allocator = std.heap.page_allocator;
+
+    var addressProgramA: [4]u8 = undefined;
+    var sizeProgramA: [4]u8 = undefined;
+    var addressProgramB: [4]u8 = undefined;
+    var sizeProgramB: [4]u8 = undefined;
+
+    @memcpy(addressProgramA[0..4], data[40..44]);
+    @memcpy(sizeProgramA[0..4], data[44..48]);
+    @memcpy(addressProgramB[0..4], data[64..68]);
+    @memcpy(sizeProgramB[0..4], data[68..72]);
+
+    const sizeA = korgFormat.byteArraytoInt(sizeProgramA[0..4]);
+    const sizeB = korgFormat.byteArraytoInt(sizeProgramB[0..4]);
+
+    var prog = try allocator.alloc(u8, sizeA + sizeB);
+
+    const addressA = korgFormat.byteArraytoInt(addressProgramA[0..4]) - 16;
+    const addressB = korgFormat.byteArraytoInt(addressProgramB[0..4]) - 16;
+
+    @memcpy(prog[0..sizeA], data[addressA .. addressA + sizeA]);
+    @memcpy(prog[sizeA .. sizeA + sizeB], data[addressB .. addressB + sizeB]);
+
+    return prog;
+}
+
+// Get combination data section from the PCG file
+pub fn getCombiData(data: []u8) ![]u8 {
+    const allocator = std.heap.page_allocator;
+
+    var addressCombiA: [4]u8 = undefined;
+    var sizeCombiA: [4]u8 = undefined;
+    var addressCombiB: [4]u8 = undefined;
+    var sizeCombiB: [4]u8 = undefined;
+
+    @memcpy(addressCombiA[0..4], data[32..36]);
+    @memcpy(sizeCombiA[0..4], data[36..40]);
+    @memcpy(addressCombiB[0..4], data[56..60]);
+    @memcpy(sizeCombiB[0..4], data[60..64]);
+
+    const sizeA = korgFormat.byteArraytoInt(sizeCombiA[0..4]);
+    const sizeB = korgFormat.byteArraytoInt(sizeCombiB[0..4]);
+
+    var combi = try allocator.alloc(u8, sizeA + sizeB);
+
+    const addressA = korgFormat.byteArraytoInt(addressCombiA[0..4]) - 16;
+    const addressB = korgFormat.byteArraytoInt(addressCombiB[0..4]) - 16;
+
+    @memcpy(combi[0..sizeA], data[addressA .. addressA + sizeA]);
+    @memcpy(combi[sizeA .. sizeA + sizeB], data[addressB .. addressB + sizeB]);
+
+    return combi;
+}
+
+// Create a SysEx file with the given data and type
 pub fn createSysexFile(filename: []const u8, fileType: u8, data: []u8) !void {
     const allocator = std.heap.page_allocator;
     var file = std.fs.cwd().createFile(filename, .{}) catch {
-        std.debug.print("SysEx file could not be created: {s}\n", .{filename});
+        std.log.err("SysEx file could not be created: {s}\n", .{filename});
         return;
     };
     defer file.close();

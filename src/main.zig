@@ -28,21 +28,37 @@ pub fn readFile(path: []const u8) ![]u8 {
 
         return try data_reader.interface.readAlloc(allocator, file_size - position);
     } else {
-        std.debug.print("File is NOT in Korg5 format.\n", .{});
+        std.log.err("Unsupported file format\n", .{});
         return error.InvalidFormat;
     }
 }
 
 pub fn main() !void {
+    std.log.info("Starting PCG to SysEx conversion...", .{});
     const data = readFile("X3_PLOAD.PCG") catch |err| {
-        std.debug.print("Error reading file: {}\n", .{err});
+        std.log.err("Error reading file: {}\n", .{err});
         return;
     };
 
+    std.log.info("Extracting data sections...", .{});
     const global = try pcg2syx.getGlobalData(data);
+    const drums = try pcg2syx.getDrumsData(data);
+    const program = try pcg2syx.getProgramData(data);
+    const combi = try pcg2syx.getCombiData(data);
+
+    std.log.info("Creating SysEx files...", .{});
     try pcg2syx.createSysexFile("global.syx", pcg2syx.HEADER_GLOBAL, global);
+    try pcg2syx.createSysexFile("drums.syx", pcg2syx.HEADER_DRUMS, drums);
+    try pcg2syx.createSysexFile("program.syx", pcg2syx.HEADER_PROGRAM, program);
+    try pcg2syx.createSysexFile("combi.syx", pcg2syx.HEADER_COMBI, combi);
 
     // Free allocated memory here
+    std.log.info("Freeing allocated memory...", .{});
     std.heap.page_allocator.free(data);
     std.heap.page_allocator.free(global);
+    std.heap.page_allocator.free(drums);
+    std.heap.page_allocator.free(program);
+    std.heap.page_allocator.free(combi);
+
+    std.log.info("Conversion completed successfully.", .{});
 }
