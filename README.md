@@ -2,6 +2,42 @@
 
 _For those who come after..._
 
+This utility converts Korg PCG and SNG files into SysEx message files that can be sent to some vintage Korg
+synthesizers. It's useful if you want to transfer data (e.g. after a data loss) to your synthesizer via MIDI instead of
+using a floppy disk drive.
+
+## Usage
+
+```
+./pcg2syx <input_file.pcg>
+```
+
+## Supported synthesizers
+
+- Korg X3/X2/X5D
+- Korg N264/N364
+
+
+## Build
+
+This small utility is written in Zig. To build it, you need to have Zig
+[installed](https://ziglang.org/learn/getting-started/) on your system. Then, you can build the project using the
+following command:
+
+```sh
+zig build --release=safe
+```
+
+## TODO
+
+- [ ] Support SNG files
+- [ ] Add command-line options for input/output file paths
+- [ ] Add tests
+- [ ] Add documentation
+- [ ] Improve error handling and reporting
+
+---
+
 ## Background
 
 I'm the owner of a Korg N364 synthesizer, which is a great piece of hardware but has a limited interface for interacting
