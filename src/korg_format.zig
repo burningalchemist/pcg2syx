@@ -2,8 +2,8 @@ const std = @import("std");
 
 // Korg Product IDs
 const product_id = enum(u8) {
-    N_series = 0x35,
-    i_series = 0x39,
+    X_series = 0x35, // Also includes N264/364
+    i3 = 0x39,
     Triton = 0x50,
     Karma = 0x5D,
     Triton_LE = 0x63,
@@ -30,7 +30,7 @@ pub fn isSupported(b: []const u8) bool {
     }
     const id = @as(product_id, @enumFromInt(b[4]));
     const result = switch (id) {
-        product_id.N_series => true,
+        product_id.X_series => true,
         else => false,
     };
 
