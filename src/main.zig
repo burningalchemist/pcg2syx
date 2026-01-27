@@ -40,26 +40,26 @@ pub fn main() !void {
         std.log.err("Error reading file: {}\n", .{err});
         return;
     };
+    defer std.heap.page_allocator.free(data);
 
     std.log.info("Extracting data sections...", .{});
     const global = try pcg2syx.getGlobalData(data);
+    defer std.heap.page_allocator.free(global);
+
     const drums = try pcg2syx.getDrumsData(data);
+    defer std.heap.page_allocator.free(drums);
+
     const program = try pcg2syx.getProgramData(data);
+    defer std.heap.page_allocator.free(program);
+
     const combi = try pcg2syx.getCombiData(data);
+    defer std.heap.page_allocator.free(combi);
 
     std.log.info("Creating SysEx files...", .{});
     try pcg2syx.createSysexFile("global.syx", pcg2syx.HEADER_GLOBAL, global);
     try pcg2syx.createSysexFile("drums.syx", pcg2syx.HEADER_DRUMS, drums);
     try pcg2syx.createSysexFile("program.syx", pcg2syx.HEADER_PROGRAM, program);
     try pcg2syx.createSysexFile("combi.syx", pcg2syx.HEADER_COMBI, combi);
-
-    // Free allocated memory here
-    std.log.info("Freeing allocated memory...", .{});
-    std.heap.page_allocator.free(data);
-    std.heap.page_allocator.free(global);
-    std.heap.page_allocator.free(drums);
-    std.heap.page_allocator.free(program);
-    std.heap.page_allocator.free(combi);
 
     std.log.info("Conversion completed successfully.", .{});
 }
