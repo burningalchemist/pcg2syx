@@ -1,15 +1,17 @@
 const std = @import("std");
 const korgFormat = @import("korg_format.zig");
 
-pub const HEADER = [_]u8{ 0xF0, 66, 48, 53, 0, 0 };
-pub const HEADER_SONG: u8 = 72;
-pub const HEADER_PROGRAM: u8 = 76;
-pub const HEADER_COMBI: u8 = 77;
-pub const HEADER_GLOBAL: u8 = 81;
-pub const HEADER_DRUMS: u8 = 82;
-pub const HEADER_ALL: u8 = 80;
+// SysEx header and footer constants
+pub const HEADER = [_]u8{ 0xF0, 0x42, 0x30, 0x35, 0x00, 0x00 };
+pub const HEADER_SONG: u8 = 0x48;
+pub const HEADER_PROGRAM: u8 = 0x4C;
+pub const HEADER_COMBI: u8 = 0x4D;
+pub const HEADER_GLOBAL: u8 = 0x51;
+pub const HEADER_DRUMS: u8 = 0x52;
+pub const HEADER_ALL: u8 = 0x50;
 pub const FOOTER: u8 = 0xF7;
 
+// Convert data from 8-bit to 7-bit format for SysEx transmission
 pub fn convert(src: []u8) ![]u8 {
     var addByte: u8 = 0;
     if (src.len * 8 % 7 > 0) {
