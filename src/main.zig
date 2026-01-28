@@ -15,23 +15,22 @@ pub fn readFile(path: []const u8) ![]u8 {
 
     var header: [5]u8 = undefined;
     var header_reader = file.reader(&header);
-    const contents = try header_reader.interface.readSliceShort(&header);
+    _ = try header_reader.interface.readSliceShort(&header);
     try file.seekTo(header_reader.pos + DATA_OFFSET);
 
-    // Check if the format is supported
-    if (korgFormat.isSupported(header[0..contents])) {
-        std.log.info("Input file format: {s}", .{header[0..contents]});
-        const allocator = std.heap.page_allocator;
-        const position = try file.getPos();
-
-        var data_reader = file.reader(result);
-        try data_reader.seekBy(@intCast(position));
-
-        return try data_reader.interface.readAlloc(allocator, file_size - position);
-    } else {
+    if (!korgFormat.isSupported(&header)) {
         std.log.err("Unsupported file format\n", .{});
         return error.InvalidFormat;
     }
+
+    std.log.info("Input file format: {s}", .{&header});
+    const allocator = std.heap.page_allocator;
+    const position = try file.getPos();
+
+    var data_reader = file.reader(result);
+    try data_reader.seekBy(@intCast(position));
+
+    return try data_reader.interface.readAlloc(allocator, file_size - position);
 }
 
 pub fn main() !void {
