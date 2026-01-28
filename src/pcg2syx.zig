@@ -46,12 +46,9 @@ pub fn convert(src: []u8) ![]u8 {
 
 // Extract global settings from the source data
 pub fn extractGlobal(src: []u8) ![]u8 {
-    const allocator = std.heap.page_allocator;
-    var extracted = try allocator.alloc(u8, 28);
+    var extracted = try std.heap.page_allocator.alloc(u8, 28);
 
-    for (extracted[23..28]) |*byte| {
-        byte.* = 0;
-    }
+    @memset(extracted[23..28], 0);
     @memcpy(extracted[0..5], src[0..5]);
     @memcpy(extracted[5..19], src[10..24]);
     @memcpy(extracted[19..21], src[25..27]);
@@ -62,8 +59,7 @@ pub fn extractGlobal(src: []u8) ![]u8 {
 
 // Extract drum settings from the source data
 pub fn extractDrums(src: []u8) ![]u8 {
-    const allocator = std.heap.page_allocator;
-    var extracted = try allocator.alloc(u8, 1680);
+    var extracted = try std.heap.page_allocator.alloc(u8, 1680);
 
     for (0..240) |i| {
         extracted[0 + 7 * i] = src[0 + 22 * i];
@@ -99,8 +95,6 @@ pub fn getGlobalData(data: []u8) ![]u8 {
 
 // Get drum data section from the PCG file
 pub fn getDrumsData(data: []u8) ![]u8 {
-    const allocator = std.heap.page_allocator;
-
     var addressDrumsA: [4]u8 = undefined;
     var sizeDrumsA: [4]u8 = undefined;
     var addressDrumsB: [4]u8 = undefined;
@@ -114,7 +108,7 @@ pub fn getDrumsData(data: []u8) ![]u8 {
     const sizeA = korgFormat.byteArraytoInt(sizeDrumsA[0..4]);
     const sizeB = korgFormat.byteArraytoInt(sizeDrumsB[0..4]);
 
-    var drums = try allocator.alloc(u8, sizeA + sizeB);
+    var drums = try std.heap.page_allocator.alloc(u8, sizeA + sizeB);
 
     const addressA = korgFormat.byteArraytoInt(addressDrumsA[0..4]) - 16;
     const addressB = korgFormat.byteArraytoInt(addressDrumsB[0..4]) - 16;
@@ -127,8 +121,6 @@ pub fn getDrumsData(data: []u8) ![]u8 {
 
 // Get program data section from the PCG file
 pub fn getProgramData(data: []u8) ![]u8 {
-    const allocator = std.heap.page_allocator;
-
     var addressProgramA: [4]u8 = undefined;
     var sizeProgramA: [4]u8 = undefined;
     var addressProgramB: [4]u8 = undefined;
@@ -142,7 +134,7 @@ pub fn getProgramData(data: []u8) ![]u8 {
     const sizeA = korgFormat.byteArraytoInt(sizeProgramA[0..4]);
     const sizeB = korgFormat.byteArraytoInt(sizeProgramB[0..4]);
 
-    var prog = try allocator.alloc(u8, sizeA + sizeB);
+    var prog = try std.heap.page_allocator.alloc(u8, sizeA + sizeB);
 
     const addressA = korgFormat.byteArraytoInt(addressProgramA[0..4]) - 16;
     const addressB = korgFormat.byteArraytoInt(addressProgramB[0..4]) - 16;
@@ -155,8 +147,6 @@ pub fn getProgramData(data: []u8) ![]u8 {
 
 // Get combination data section from the PCG file
 pub fn getCombiData(data: []u8) ![]u8 {
-    const allocator = std.heap.page_allocator;
-
     var addressCombiA: [4]u8 = undefined;
     var sizeCombiA: [4]u8 = undefined;
     var addressCombiB: [4]u8 = undefined;
@@ -170,7 +160,7 @@ pub fn getCombiData(data: []u8) ![]u8 {
     const sizeA = korgFormat.byteArraytoInt(sizeCombiA[0..4]);
     const sizeB = korgFormat.byteArraytoInt(sizeCombiB[0..4]);
 
-    var combi = try allocator.alloc(u8, sizeA + sizeB);
+    var combi = try std.heap.page_allocator.alloc(u8, sizeA + sizeB);
 
     const addressA = korgFormat.byteArraytoInt(addressCombiA[0..4]) - 16;
     const addressB = korgFormat.byteArraytoInt(addressCombiB[0..4]) - 16;
@@ -183,7 +173,6 @@ pub fn getCombiData(data: []u8) ![]u8 {
 
 // Create a SysEx file with the given data and type
 pub fn createSysexFile(filename: []const u8, fileType: u8, data: []u8) !void {
-    const allocator = std.heap.page_allocator;
     var file = std.fs.cwd().createFile(filename, .{}) catch {
         std.log.err("SysEx file could not be created: {s}\n", .{filename});
         return;
@@ -198,7 +187,7 @@ pub fn createSysexFile(filename: []const u8, fileType: u8, data: []u8) !void {
         std.log.err("Error converting data for SysEx file: {s}\n", .{filename});
         return;
     };
-    defer allocator.free(convertedData);
+    defer std.heap.page_allocator.free(convertedData);
     _ = try file.write(convertedData);
     _ = try file.write(&[_]u8{FOOTER});
 }
