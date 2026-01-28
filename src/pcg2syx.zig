@@ -12,13 +12,12 @@ pub const HEADER_ALL: u8 = 0x50;
 pub const FOOTER: u8 = 0xF7;
 
 // Convert data from 8-bit to 7-bit format for SysEx transmission
-pub fn convert(src: []u8) ![]u8 {
+pub fn convert(allocator: anytype, src: []const u8) ![]u8 {
     var addByte: u8 = 0;
     if (src.len * 8 % 7 > 0) {
         addByte = 1;
     }
 
-    const allocator = std.heap.page_allocator;
     const dest_size = src.len * 8 / 7 + addByte;
 
     var dest = try allocator.alloc(u8, dest_size);
@@ -45,8 +44,8 @@ pub fn convert(src: []u8) ![]u8 {
 }
 
 // Extract global settings from the source data
-pub fn extractGlobal(src: []u8) ![]u8 {
-    var extracted = try std.heap.page_allocator.alloc(u8, 28);
+pub fn extractGlobal(allocator: anytype, src: []const u8) ![]u8 {
+    var extracted = try allocator.alloc(u8, 28);
 
     @memset(extracted[23..28], 0);
     @memcpy(extracted[0..5], src[0..5]);
@@ -58,8 +57,8 @@ pub fn extractGlobal(src: []u8) ![]u8 {
 }
 
 // Extract drum settings from the source data
-pub fn extractDrums(src: []u8) ![]u8 {
-    var extracted = try std.heap.page_allocator.alloc(u8, 1680);
+pub fn extractDrums(allocator: anytype, src: []const u8) ![]u8 {
+    var extracted = try allocator.alloc(u8, 1680);
 
     for (0..240) |i| {
         extracted[0 + 7 * i] = src[0 + 22 * i];
@@ -75,9 +74,7 @@ pub fn extractDrums(src: []u8) ![]u8 {
 }
 
 // Get global data section from the PCG file
-pub fn getGlobalData(data: []u8) ![]u8 {
-    const allocator = std.heap.page_allocator;
-
+pub fn getGlobalData(allocator: anytype, data: []u8) ![]u8 {
     var addressGlobal: [4]u8 = undefined;
     var sizeGlobal: [4]u8 = undefined;
 
@@ -86,15 +83,17 @@ pub fn getGlobalData(data: []u8) ![]u8 {
 
     const globalSize = korgFormat.byteArraytoInt(sizeGlobal[0..4]);
     var global = try allocator.alloc(u8, globalSize);
+    defer allocator.free(global);
     const address = korgFormat.byteArraytoInt(addressGlobal[0..4]) - 16;
 
     @memcpy(global[0..globalSize], data[address .. address + globalSize]);
 
-    return extractGlobal(global[0..globalSize]);
+    const result = try extractGlobal(allocator, global[0..globalSize]);
+    return result;
 }
 
 // Get drum data section from the PCG file
-pub fn getDrumsData(data: []u8) ![]u8 {
+pub fn getDrumsData(allocator: anytype, data: []u8) ![]u8 {
     var addressDrumsA: [4]u8 = undefined;
     var sizeDrumsA: [4]u8 = undefined;
     var addressDrumsB: [4]u8 = undefined;
@@ -108,7 +107,8 @@ pub fn getDrumsData(data: []u8) ![]u8 {
     const sizeA = korgFormat.byteArraytoInt(sizeDrumsA[0..4]);
     const sizeB = korgFormat.byteArraytoInt(sizeDrumsB[0..4]);
 
-    var drums = try std.heap.page_allocator.alloc(u8, sizeA + sizeB);
+    var drums = try allocator.alloc(u8, sizeA + sizeB);
+    defer allocator.free(drums);
 
     const addressA = korgFormat.byteArraytoInt(addressDrumsA[0..4]) - 16;
     const addressB = korgFormat.byteArraytoInt(addressDrumsB[0..4]) - 16;
@@ -116,11 +116,12 @@ pub fn getDrumsData(data: []u8) ![]u8 {
     @memcpy(drums[0..sizeA], data[addressA .. addressA + sizeA]);
     @memcpy(drums[sizeA .. sizeA + sizeB], data[addressB .. addressB + sizeB]);
 
-    return extractDrums(drums[0 .. sizeA + sizeB]);
+    const result = try extractDrums(allocator, drums[0 .. sizeA + sizeB]);
+    return result;
 }
 
 // Get program data section from the PCG file
-pub fn getProgramData(data: []u8) ![]u8 {
+pub fn getProgramData(allocator: anytype, data: []u8) ![]u8 {
     var addressProgramA: [4]u8 = undefined;
     var sizeProgramA: [4]u8 = undefined;
     var addressProgramB: [4]u8 = undefined;
@@ -134,7 +135,7 @@ pub fn getProgramData(data: []u8) ![]u8 {
     const sizeA = korgFormat.byteArraytoInt(sizeProgramA[0..4]);
     const sizeB = korgFormat.byteArraytoInt(sizeProgramB[0..4]);
 
-    var prog = try std.heap.page_allocator.alloc(u8, sizeA + sizeB);
+    var prog = try allocator.alloc(u8, sizeA + sizeB);
 
     const addressA = korgFormat.byteArraytoInt(addressProgramA[0..4]) - 16;
     const addressB = korgFormat.byteArraytoInt(addressProgramB[0..4]) - 16;
@@ -146,7 +147,7 @@ pub fn getProgramData(data: []u8) ![]u8 {
 }
 
 // Get combination data section from the PCG file
-pub fn getCombiData(data: []u8) ![]u8 {
+pub fn getCombiData(allocator: anytype, data: []u8) ![]u8 {
     var addressCombiA: [4]u8 = undefined;
     var sizeCombiA: [4]u8 = undefined;
     var addressCombiB: [4]u8 = undefined;
@@ -160,7 +161,7 @@ pub fn getCombiData(data: []u8) ![]u8 {
     const sizeA = korgFormat.byteArraytoInt(sizeCombiA[0..4]);
     const sizeB = korgFormat.byteArraytoInt(sizeCombiB[0..4]);
 
-    var combi = try std.heap.page_allocator.alloc(u8, sizeA + sizeB);
+    var combi = try allocator.alloc(u8, sizeA + sizeB);
 
     const addressA = korgFormat.byteArraytoInt(addressCombiA[0..4]) - 16;
     const addressB = korgFormat.byteArraytoInt(addressCombiB[0..4]) - 16;
@@ -172,7 +173,7 @@ pub fn getCombiData(data: []u8) ![]u8 {
 }
 
 // Create a SysEx file with the given data and type
-pub fn createSysexFile(filename: []const u8, fileType: u8, data: []u8) !void {
+pub fn createSysexFile(filename: []const u8, fileType: u8, data: []const u8) !void {
     var file = std.fs.cwd().createFile(filename, .{}) catch {
         std.log.err("SysEx file could not be created: {s}\n", .{filename});
         return;
@@ -183,11 +184,52 @@ pub fn createSysexFile(filename: []const u8, fileType: u8, data: []u8) !void {
     sysexHeader[4] = fileType;
     _ = try file.write(&sysexHeader);
 
-    const convertedData = convert(data) catch {
+    const allocator = std.heap.page_allocator;
+    const convertedData = convert(allocator, data) catch {
         std.log.err("Error converting data for SysEx file: {s}\n", .{filename});
         return;
     };
-    defer std.heap.page_allocator.free(convertedData);
+    defer allocator.free(convertedData);
+
     _ = try file.write(convertedData);
     _ = try file.write(&[_]u8{FOOTER});
 }
+
+test "convert functionality" {
+    const allocator = std.testing.allocator;
+    const input: [10]u8 = [_]u8{ 0xFF, 0x00, 0x7F, 0x80, 0x55, 0xAA, 0x33, 0xCC, 0x99, 0x66 };
+    const converted = try convert(allocator, input[0..]);
+    defer allocator.free(converted);
+    // Expected output needs to be calculated based on the conversion logic
+    const expected: [15]u8 = [_]u8{0} ** 15;
+
+    try std.testing.expect(std.mem.eql(u8, converted, expected[0..]));
+}
+
+test "extractGlobal functionality" {
+    const allocator = std.testing.allocator;
+    const input: [100]u8 = [_]u8{0} ** 100;
+    const extracted = try extractGlobal(allocator, input[0..]);
+    defer allocator.free(extracted);
+    // Expected output needs to be defined based on the extraction logic
+    const expected: [28]u8 = [_]u8{0} ** 28;
+
+    try std.testing.expect(std.mem.eql(u8, extracted, expected[0..]));
+}
+
+test "extractDrums functionality" {
+    const allocator = std.testing.allocator;
+    const input: [5280]u8 = [_]u8{0} ** 5280;
+    const extracted = try extractDrums(allocator, input[0..]);
+    defer allocator.free(extracted);
+    // Expected output needs to be defined based on the extraction logic
+    const expected: [1680]u8 = [_]u8{0} ** 1680;
+
+    try std.testing.expect(std.mem.eql(u8, extracted, expected[0..]));
+}
+
+//test "createSysexFile functionality" {
+//    const data: [10]u8 = [_]u8{ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A };
+//
+//    try createSysexFile("test_output.syx", HEADER_PROGRAM, data[0..]);
+//}
