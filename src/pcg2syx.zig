@@ -11,8 +11,13 @@ pub const HEADER_DRUMS: u8 = 0x52;
 pub const HEADER_ALL: u8 = 0x50;
 pub const FOOTER: u8 = 0xF7;
 
-// Convert data from 8-bit to 7-bit format for SysEx transmission
-pub fn convert(allocator: anytype, src: []const u8) ![]u8 {
+// SysEx data must be "7-bit clean" meaning the high bit (bit 7) of every byte must be 0. To send 8-bit data,
+// manufacturers often use a "7-to-8" packing scheme:
+// * The Header Byte contains the MSBs of the next 7 data bytes
+// * The Data Bytes contain the lower 7 bits of each original byte
+
+// Encode data from 8-bit to 7-bit format for SysEx transmission
+fn encodeSysex(allocator: anytype, src: []const u8) ![]u8 {
     var addByte: u8 = 0;
     if (src.len * 8 % 7 > 0) {
         addByte = 1;
@@ -37,6 +42,36 @@ pub fn convert(allocator: anytype, src: []const u8) ![]u8 {
         }
 
         dest[destIndex] = dest[destIndex] & 127;
+        destIndex += 1;
+    }
+
+    return dest;
+}
+
+// Decode data from 7-bit back to 8-bit format
+fn decodeSysex(allocator: anytype, src: []const u8) ![]u8 {
+    // Count data bytes (exclude MSB collection bytes)
+    var data_bytes: usize = 0;
+    for (0..src.len) |i| {
+        if (i % 8 != 0) {
+            data_bytes += 1;
+        }
+    }
+
+    var dest = try allocator.alloc(u8, data_bytes);
+    var destIndex: usize = 0;
+
+    for (0..src.len) |i| {
+        const remainder: usize = i % 8;
+        if (remainder == 0) {
+            continue; // Skip MSB collection byte
+        }
+        dest[destIndex] = src[i];
+        const msb_byte: u8 = src[i - remainder];
+        const flag_bit: u8 = @as(u8, 1) << @intCast(remainder - 1);
+        if ((msb_byte & flag_bit) != 0) {
+            dest[destIndex] |= 0x80; // Set the MSB
+        }
         destIndex += 1;
     }
 
@@ -185,7 +220,7 @@ pub fn createSysexFile(filename: []const u8, fileType: u8, data: []const u8) !vo
     _ = try file.write(&sysexHeader);
 
     const allocator = std.heap.page_allocator;
-    const convertedData = convert(allocator, data) catch {
+    const convertedData = encodeSysex(allocator, data) catch {
         std.log.err("Error converting data for SysEx file: {s}\n", .{filename});
         return;
     };
@@ -195,15 +230,19 @@ pub fn createSysexFile(filename: []const u8, fileType: u8, data: []const u8) !vo
     _ = try file.write(&[_]u8{FOOTER});
 }
 
-test "convert functionality" {
+test "encodeSysex/decodeSysex converts data correctly" {
     const allocator = std.testing.allocator;
-    const input: [10]u8 = [_]u8{ 0xFF, 0x00, 0x7F, 0x80, 0x55, 0xAA, 0x33, 0xCC, 0x99, 0x66 };
-    const converted = try convert(allocator, input[0..]);
-    defer allocator.free(converted);
-    // Expected output needs to be calculated based on the conversion logic
-    const expected: [15]u8 = [_]u8{0} ** 15;
+    const input = [_]u8{ 0x81, 0x42 };
+    const expected = [_]u8{ 0x01, 0x01, 0x42 };
 
-    try std.testing.expect(std.mem.eql(u8, converted, expected[0..]));
+    const encoded = try encodeSysex(allocator, input[0..]);
+    defer allocator.free(encoded);
+
+    const decoded = try decodeSysex(allocator, encoded[0..]);
+    defer allocator.free(decoded);
+
+    try std.testing.expect(std.mem.eql(u8, &expected, encoded));
+    try std.testing.expect(std.mem.eql(u8, &input, decoded));
 }
 
 test "extractGlobal functionality" {
@@ -214,7 +253,7 @@ test "extractGlobal functionality" {
     // Expected output needs to be defined based on the extraction logic
     const expected: [28]u8 = [_]u8{0} ** 28;
 
-    try std.testing.expect(std.mem.eql(u8, extracted, expected[0..]));
+    try std.testing.expect(std.mem.eql(u8, extracted, &expected));
 }
 
 test "extractDrums functionality" {
