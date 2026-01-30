@@ -40,7 +40,6 @@ fn encodeSysex(allocator: anytype, src: []const u8) ![]u8 {
             const flag_bit: u8 = @as(u8, 1) << @intCast(remainder);
             dest[destIndex - (remainder + 1)] |= flag_bit;
         }
-
         dest[destIndex] = dest[destIndex] & 127;
         destIndex += 1;
     }
@@ -82,11 +81,11 @@ fn decodeSysex(allocator: anytype, src: []const u8) ![]u8 {
 pub fn extractGlobal(allocator: anytype, src: []const u8) ![]u8 {
     var extracted = try allocator.alloc(u8, 28);
 
-    @memset(extracted[23..28], 0);
     @memcpy(extracted[0..5], src[0..5]);
     @memcpy(extracted[5..19], src[10..24]);
     @memcpy(extracted[19..21], src[25..27]);
     @memcpy(extracted[21..23], src[44..46]);
+    @memset(extracted[23..], 0);
 
     return extracted;
 }
@@ -122,8 +121,8 @@ pub fn getGlobalData(allocator: anytype, data: []u8) ![]u8 {
     const address = korgFormat.byteArraytoInt(addressGlobal[0..4]) - 16;
 
     @memcpy(global[0..globalSize], data[address .. address + globalSize]);
-
     const result = try extractGlobal(allocator, global[0..globalSize]);
+
     return result;
 }
 
@@ -247,28 +246,61 @@ test "encodeSysex/decodeSysex converts data correctly" {
 
 test "extractGlobal functionality" {
     const allocator = std.testing.allocator;
-    const input: [100]u8 = [_]u8{0} ** 100;
-    const extracted = try extractGlobal(allocator, input[0..]);
+
+    // Sample data - A-Za-z0-9
+    const src = [_]u8{
+        0x41, 0x42, 0x43, 0x44, 0x45, 0x46, 0x47, 0x48,
+        0x49, 0x4A, 0x4B, 0x4C, 0x4D, 0x4E, 0x4F, 0x50,
+        0x51, 0x52, 0x53, 0x54, 0x55, 0x56, 0x57, 0x58,
+        0x59, 0x5A, 0x61, 0x62, 0x63, 0x64, 0x65, 0x66,
+        0x67, 0x68, 0x69, 0x6A, 0x6B, 0x6C, 0x6D, 0x6E,
+        0x6F, 0x70, 0x71, 0x72, 0x73, 0x74, 0x75, 0x76,
+        0x77, 0x78, 0x79, 0x7A, 0x30, 0x31, 0x32, 0x33,
+        0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x41, 0x42,
+    };
+    const extracted = try extractGlobal(allocator, src[0..]);
     defer allocator.free(extracted);
-    // Expected output needs to be defined based on the extraction logic
-    const expected: [28]u8 = [_]u8{0} ** 28;
+
+    // Expected data - ABCDEKLMNOPQRSTUVWXZast
+    const expected = [_]u8{
+        0x41, 0x42, 0x43, 0x44, 0x45, 0x4B, 0x4C,
+        0x4D, 0x4E, 0x4F, 0x50, 0x51, 0x52, 0x53,
+        0x54, 0x55, 0x56, 0x57, 0x58, 0x5A, 0x61,
+        0x73, 0x74, 0x00, 0x00, 0x00, 0x00, 0x00,
+    };
 
     try std.testing.expect(std.mem.eql(u8, extracted, &expected));
 }
 
 test "extractDrums functionality" {
     const allocator = std.testing.allocator;
-    const input: [5280]u8 = [_]u8{0} ** 5280;
+    var input = [_]u8{0} ** 5280;
+
+    // Iteration 0: bytes 0,2,3,5,6,8,9 should become output bytes 0-6
+    input[0] = 0x11;
+    input[2] = 0x22;
+    input[3] = 0x33;
+    input[5] = 0x44;
+    input[6] = 0x55;
+    input[8] = 0x66;
+    input[9] = 0x77;
+
+    // Iteration 1: bytes 22,24,25,27,28,30,31 should become output bytes 7-13
+    input[22] = 0x88;
+    input[24] = 0x99;
+    input[25] = 0xAA;
+    input[27] = 0xBB;
+    input[28] = 0xCC;
+    input[30] = 0xDD;
+    input[31] = 0xEE;
+
     const extracted = try extractDrums(allocator, input[0..]);
     defer allocator.free(extracted);
-    // Expected output needs to be defined based on the extraction logic
-    const expected: [1680]u8 = [_]u8{0} ** 1680;
 
-    try std.testing.expect(std.mem.eql(u8, extracted, expected[0..]));
+    const expected = [_]u8{
+        0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
+        0x88, 0x99, 0xAA, 0xBB, 0xCC, 0xDD, 0xEE,
+    };
+
+    try std.testing.expect(std.mem.eql(u8, extracted[0..14], &expected));
 }
-
-//test "createSysexFile functionality" {
-//    const data: [10]u8 = [_]u8{ 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0A };
-//
-//    try createSysexFile("test_output.syx", HEADER_PROGRAM, data[0..]);
-//}
