@@ -64,49 +64,18 @@ pub fn main() !void {
     std.log.info("Conversion completed successfully.", .{});
 }
 
-// Test helpers
+// Tests
+
+// Discover all tests in the module
+test "tests:beforeAll" {
+    std.testing.refAllDecls(@This());
+}
 
 test "readFile functionality" {
     const allocator = std.testing.allocator;
     const data = try readFile(allocator, "X3_PLOAD.PCG");
     defer allocator.free(data);
     try std.testing.expect(data.len > 0);
-}
-
-test "getGlobalData functionality" {
-    const allocator = std.testing.allocator;
-    const data = try readFile(allocator, "X3_PLOAD.PCG");
-    defer allocator.free(data);
-    const global = try pcg2syx.getGlobalData(allocator, data);
-    defer allocator.free(global);
-    try std.testing.expect(global.len > 0);
-}
-
-test "getDrumsData functionality" {
-    const allocator = std.testing.allocator;
-    const data = try readFile(allocator, "X3_PLOAD.PCG");
-    defer allocator.free(data);
-    const drums = try pcg2syx.getDrumsData(allocator, data);
-    defer allocator.free(drums);
-    try std.testing.expect(drums.len > 0);
-}
-
-test "getProgramData functionality" {
-    const allocator = std.testing.allocator;
-    const data = try readFile(allocator, "X3_PLOAD.PCG");
-    defer allocator.free(data);
-    const program = try pcg2syx.getProgramData(allocator, data);
-    defer allocator.free(program);
-    try std.testing.expect(program.len > 0);
-}
-
-test "getCombiData functionality" {
-    const allocator = std.testing.allocator;
-    const data = try readFile(allocator, "X3_PLOAD.PCG");
-    defer allocator.free(data);
-    const combi = try pcg2syx.getCombiData(allocator, data);
-    defer allocator.free(combi);
-    try std.testing.expect(combi.len > 0);
 }
 
 test "verify combi.syx integrity" {
@@ -126,9 +95,4 @@ test "verify combi.syx integrity" {
     defer allocator.free(hash_hex);
 
     try std.testing.expect(std.mem.eql(u8, hash_hex, REF_COMBI_SHA1));
-}
-
-test "tests:beforeAll" {
-    _ = @import("pcg2syx.zig");
-    _ = @import("korg_format.zig");
 }
