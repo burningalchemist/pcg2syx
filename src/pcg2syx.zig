@@ -193,17 +193,21 @@ pub fn collectData(allocator: anytype, category: CategoryData, src: []u8) ![]u8 
         return error.DataSizeMismatch;
     }
 
-    switch (category.category) {
+    const result = switch (category.category) {
         .Global => {
+            defer allocator.free(extract);
             return try extractGlobal(allocator, extract[0..totalSize]);
         },
         .Drums => {
+            defer allocator.free(extract);
             return try extractDrums(allocator, extract[0..totalSize]);
         },
         else => {
             return extract;
         },
-    }
+    };
+
+    return result;
 }
 
 // Create a SysEx file with the given data and type
