@@ -43,6 +43,7 @@ pub fn main() !void {
     defer std.process.argsFree(allocator, args);
 
     const input_file = if (args.len > 1) args[1] else "X3_PLOAD.PCG";
+    const input_filename = std.fs.path.stem(input_file);
 
     const data = readFile(allocator, input_file) catch |err| {
         std.log.err("Error reading file: {}\n", .{err});
@@ -77,7 +78,7 @@ pub fn main() !void {
     const categories = [_]pcg2syx.CategoryData{ global_category, drum_category, prog_category, combi_category };
     for (categories) |cat| {
         std.log.info("Processing category: {s}", .{@tagName(cat.category)});
-        const file_name = try std.fmt.allocPrint(allocator, "{s}.syx", .{@tagName(cat.category)});
+        const file_name = try std.fmt.allocPrint(allocator, "{s}_{s}.syx", .{ input_filename, @tagName(cat.category) });
         defer allocator.free(file_name);
         const extracted_data = try pcg2syx.collectData(allocator, cat, data);
         defer allocator.free(extracted_data);

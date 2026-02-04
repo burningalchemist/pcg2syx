@@ -31,8 +31,8 @@ zig build --release=safe
 ## TODO
 
 - [ ] Support SNG files
-- [ ] Add command-line options for input/output file paths
-- [ ] Add tests
+- [x] Add command-line options for input/output file paths
+- [x] Add tests
 - [ ] Add documentation
 - [ ] Improve error handling and reporting
 
