@@ -22,7 +22,7 @@ pub fn readFile(allocator: anytype, path: []const u8) ![]u8 {
 
     if (!korgFormat.isSupported(&header)) {
         std.log.err("Unsupported file format\n", .{});
-        return error.InvalidFormat;
+        return std.process.exit(1);
     }
 
     std.log.info("Input file format: {s}", .{&header});
@@ -58,7 +58,7 @@ pub fn main() !void {
 
     const data = readFile(allocator, input_file) catch |err| {
         std.log.err("Error reading file: {}\n", .{err});
-        return err;
+        return std.process.exit(1);
     };
     defer allocator.free(data);
 
