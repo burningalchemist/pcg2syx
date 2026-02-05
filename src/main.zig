@@ -35,15 +35,26 @@ pub fn readFile(allocator: anytype, path: []const u8) ![]u8 {
 }
 
 pub fn main() !void {
-    std.log.info("Starting PCG to SysEx conversion...", .{});
+    var stdout_buffer: [1024]u8 = undefined;
+    var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+    const stdout = &stdout_writer.interface;
+
+    try stdout.print("PCG to SysEx Converter\n\n", .{});
+    try stdout.flush();
 
     const allocator = std.heap.page_allocator;
 
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
-    const input_file = if (args.len > 1) args[1] else "X3_PLOAD.PCG";
-    const input_filename = std.fs.path.stem(input_file);
+    const input_file = if (args.len > 1) args[1] else {
+        try stdout.print("Usage: pcg2syx <input_file.pcg>\n", .{});
+        try stdout.flush();
+        std.log.err("No input file specified\n", .{});
+        return std.process.exit(2);
+    };
+
+    std.log.info("Starting conversion for file: {s}", .{input_file});
 
     const data = readFile(allocator, input_file) catch |err| {
         std.log.err("Error reading file: {}\n", .{err});
@@ -78,7 +89,7 @@ pub fn main() !void {
     const categories = [_]pcg2syx.CategoryData{ global_category, drum_category, prog_category, combi_category };
     for (categories) |cat| {
         std.log.info("Processing category: {s}", .{@tagName(cat.category)});
-        const file_name = try std.fmt.allocPrint(allocator, "{s}_{s}.syx", .{ input_filename, @tagName(cat.category) });
+        const file_name = try std.fmt.allocPrint(allocator, "{s}_{s}.syx", .{ std.fs.path.stem(input_file), @tagName(cat.category) });
         defer allocator.free(file_name);
         const extracted_data = try pcg2syx.collectData(allocator, cat, data);
         defer allocator.free(extracted_data);
