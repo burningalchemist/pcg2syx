@@ -21,8 +21,7 @@ pub fn readFile(allocator: anytype, path: []const u8) ![]u8 {
     try file.seekTo(header_reader.pos + DATA_OFFSET);
 
     if (!korgFormat.isSupported(&header)) {
-        std.log.err("Unsupported file format\n", .{});
-        return std.process.exit(1);
+        std.process.fatal("File format not supported: {s}\n", .{path});
     }
 
     std.log.info("Input file format: {s}", .{&header});
@@ -64,15 +63,13 @@ pub fn main() !void {
 
     // Read the input file
     const data = readFile(allocator, input_file) catch |err| {
-        std.log.err("Error reading file: {}\n", .{err});
-        return std.process.exit(1);
+        std.process.fatal("Failed to read input file: {}", .{err});
     };
     defer allocator.free(data);
 
     // Determine synthesizer type and corresponding data offsets
     const synth = korgOffsets.deviceOffsets(arg_synth) orelse {
-        std.log.err("Unsupported synthesizer specified: {s}\n", .{arg_synth});
-        return std.process.exit(1);
+        std.process.fatal("Unsupported synthesizer specified: {s}", .{arg_synth});
     };
 
     std.log.info("Extracting data sections...", .{});
