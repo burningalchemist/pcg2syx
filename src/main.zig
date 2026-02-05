@@ -43,7 +43,10 @@ pub fn main() !void {
     try stdout.print("PCG to SysEx Converter\n---\n", .{});
     try stdout.flush();
 
-    const allocator = std.heap.page_allocator;
+    // Initialize an arena allocator for temporary data storage during processing
+    var arena = std.heap.ArenaAllocator.init(std.heap.page_allocator);
+    defer arena.deinit();
+    const allocator = arena.allocator();
 
     // Parse command-line arguments
     const args = try std.process.argsAlloc(allocator);
