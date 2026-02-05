@@ -35,6 +35,7 @@ pub fn readFile(allocator: anytype, path: []const u8) ![]u8 {
 }
 
 pub fn main() !void {
+    // Setup stdout for printing
     var stdout_buffer: [1024]u8 = undefined;
     var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
     const stdout = &stdout_writer.interface;
@@ -44,6 +45,7 @@ pub fn main() !void {
 
     const allocator = std.heap.page_allocator;
 
+    // Parse command-line arguments
     const args = try std.process.argsAlloc(allocator);
     defer std.process.argsFree(allocator, args);
 
@@ -53,11 +55,11 @@ pub fn main() !void {
         std.log.err("No input file specified\n", .{});
         return std.process.exit(2);
     };
-
     const arg_synth = if (args.len > 2) args[2] else "n364";
 
     std.log.info("Starting conversion for file: {s}", .{input_file});
 
+    // Read the input file
     const data = readFile(allocator, input_file) catch |err| {
         std.log.err("Error reading file: {}\n", .{err});
         return std.process.exit(1);
