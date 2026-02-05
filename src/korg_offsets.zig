@@ -11,13 +11,31 @@ const DeviceOffsets = struct {
 };
 
 const devices = enum {
-    N364,
+    x2,
+    x3,
+    x5,
+    n264,
+    n364,
+    o1w,
+    o3rw,
     // Other devices can be added here
 };
 
-pub fn deviceOffsets(comptime device: devices) DeviceOffsets {
-    return switch (device) {
-        .N364 => DeviceOffsets{
+pub fn deviceOffsets(synth: []const u8) ?DeviceOffsets {
+    const device: ?devices = std.meta.stringToEnum(devices, synth);
+    if (device == null) {
+        return null;
+    }
+
+    return switch (device.?) {
+        .x2,
+        .x3,
+        .x5,
+        .n264,
+        .n364,
+        .o1w,
+        .o3rw,
+        => DeviceOffsets{
             .PROGRAM_A = 40,
             .PROGRAM_B = 64,
             .COMBI_A = 32,

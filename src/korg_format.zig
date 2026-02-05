@@ -3,7 +3,7 @@ const std = @import("std");
 // Korg Product IDs
 const product_id = enum(u8) {
     X_series = 0x35, // Also includes N264/364
-    i3 = 0x39,
+    i_series = 0x39,
     Triton = 0x50,
     Karma = 0x5D,
     Triton_LE = 0x63,

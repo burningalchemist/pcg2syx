@@ -9,13 +9,14 @@ using a floppy disk drive.
 ## Usage
 
 ```
-./pcg2syx <input_file.pcg>
+./pcg2syx <input_file.pcg> [synth_model|n364]
 ```
 
 ## Supported synthesizers
 
-- Korg X3/X2/X5D
 - Korg N264/N364
+- Korg X2/X3/X3R
+- Korg 01/W, 03R/W
 
 
 ## Build

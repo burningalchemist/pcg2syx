@@ -39,7 +39,7 @@ pub fn main() !void {
     var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
     const stdout = &stdout_writer.interface;
 
-    try stdout.print("PCG to SysEx Converter\n\n", .{});
+    try stdout.print("PCG to SysEx Converter\n---\n", .{});
     try stdout.flush();
 
     const allocator = std.heap.page_allocator;
@@ -48,11 +48,13 @@ pub fn main() !void {
     defer std.process.argsFree(allocator, args);
 
     const input_file = if (args.len > 1) args[1] else {
-        try stdout.print("Usage: pcg2syx <input_file.pcg>\n", .{});
+        try stdout.print("Usage: pcg2syx <input_file.pcg> [synth_model|n364]\n", .{});
         try stdout.flush();
         std.log.err("No input file specified\n", .{});
         return std.process.exit(2);
     };
+
+    const arg_synth = if (args.len > 2) args[2] else "n364";
 
     std.log.info("Starting conversion for file: {s}", .{input_file});
 
@@ -62,18 +64,22 @@ pub fn main() !void {
     };
     defer allocator.free(data);
 
+    // Determine synthesizer type and corresponding data offsets
+    const synth = korgOffsets.deviceOffsets(arg_synth) orelse {
+        std.log.err("Unsupported synthesizer specified: {s}\n", .{arg_synth});
+        return std.process.exit(1);
+    };
+
     std.log.info("Extracting data sections...", .{});
 
-    const n364 = korgOffsets.deviceOffsets(.N364);
-
     // Initialize databanks for Korg N364/264
-    const progA = pcg2syx.Bank.init(n364.PROGRAM_A);
-    const progB = pcg2syx.Bank.init(n364.PROGRAM_B);
-    const combiA = pcg2syx.Bank.init(n364.COMBI_A);
-    const combiB = pcg2syx.Bank.init(n364.COMBI_B);
-    const globalA = pcg2syx.Bank.init(n364.GLOBAL_A);
-    const drumsA = pcg2syx.Bank.init(n364.DRUMS_A);
-    const drumsB = pcg2syx.Bank.init(n364.DRUMS_B);
+    const progA = pcg2syx.Bank.init(synth.PROGRAM_A);
+    const progB = pcg2syx.Bank.init(synth.PROGRAM_B);
+    const combiA = pcg2syx.Bank.init(synth.COMBI_A);
+    const combiB = pcg2syx.Bank.init(synth.COMBI_B);
+    const globalA = pcg2syx.Bank.init(synth.GLOBAL_A);
+    const drumsA = pcg2syx.Bank.init(synth.DRUMS_A);
+    const drumsB = pcg2syx.Bank.init(synth.DRUMS_B);
 
     // Create category data structures
     var global_bank = [_]pcg2syx.Bank{globalA};
