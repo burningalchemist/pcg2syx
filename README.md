@@ -37,9 +37,11 @@ zig build --release=safe
 - [ ] Add documentation
 - [ ] Improve error handling and reporting
 
----
+## Rationale
 
-## Background
+<details>
+
+### Background
 
 I'm the owner of a Korg N364 synthesizer, which is a great piece of hardware but has a limited interface for interacting
 with the device via floppy disks and MIDI.
@@ -59,17 +61,19 @@ is not trivial.
 As for the MIDI interface, it only requires a standard MIDI connection. There are many software tools available that
 can send SysEx messages over MIDI, making it easy to transfer data to the synthesizer.
 
-## Problem
+### Problem
 
 To be able to send PCG/SNG data to the synthesizer over MIDI, we need to convert the PCG/SNG files into SysEx messages
 first. There are some tools available, but they either do not support the N364 model, or are outdated and no longer
 maintained. Some of them are closed-source and paid, which makes it difficult to verify their correctness or modify
 them for our specific needs.
 
-## Solution
+### Solution
 
 This repository contains a solution that converts Korg PCG/SNG files into SysEx message files, that can be sent to
 the Korg N364 using any compatible software (e.g. MIDI-OX, SysEx Librarian, etc.).
+
+</details>
 
 ## Disclaimer
 
