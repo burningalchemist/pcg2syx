@@ -29,6 +29,8 @@ following command:
 zig build --release=safe
 ```
 
+Alternatively, you might find the pre-built binaries for your platform included in the [release](https://github.com/burningalchemist/pcg2syx/releases).
+
 ## TODO
 
 - [ ] Support SNG files
