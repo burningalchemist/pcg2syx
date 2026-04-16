@@ -1,42 +1,48 @@
 const std = @import("std");
 
+const Allocator = std.mem.Allocator;
+const Io = std.Io;
+
 const korgFormat = @import("korg_format.zig");
 const korgOffsets = @import("korg_offsets.zig");
 const pcg2syx = @import("pcg2syx.zig");
 
 // Read a file and return its contents if it's in a supported format
-pub fn readFile(allocator: anytype, path: []const u8) ![]u8 {
-    const result: []u8 = undefined;
+pub fn readFile(io: Io, allocator: Allocator, path: []const u8) ![]u8 {
     const DATA_OFFSET: usize = 11;
 
     std.log.info("Reading file: {s}", .{path});
-    const file = try std.fs.cwd().openFile(path, .{ .mode = .read_only });
-    defer file.close();
+    const file = try std.Io.Dir.cwd().openFile(io, path, .{ .mode = .read_only });
+    defer file.close(io);
 
-    const file_size = try file.getEndPos();
+    const file_size = try file.length(io);
 
+    // Read the header
     var header: [5]u8 = undefined;
-    var header_reader = file.reader(&header);
-    _ = try header_reader.interface.readSliceShort(&header);
-    try file.seekTo(header_reader.pos + DATA_OFFSET);
+    var bufs = [_][]u8{&header};
+    _ = try file.readPositional(io, &bufs, 0);
+
+    var r_buf: [4096]u8 = undefined;
+    var reader = file.reader(io, &r_buf);
+    try reader.seekTo(DATA_OFFSET + header.len);
 
     if (!korgFormat.isSupported(&header)) {
         std.process.fatal("File format not supported: {s}\n", .{path});
     }
 
     std.log.info("Input file format: {s}", .{&header});
-    const position = try file.getPos();
+    const position = reader.logicalPos();
 
-    var data_reader = file.reader(result);
+    var data_reader = file.reader(io, &r_buf);
     try data_reader.seekBy(@intCast(position));
-
     return try data_reader.interface.readAlloc(allocator, file_size - position);
 }
 
-pub fn main() !void {
+pub fn main(init: std.process.Init) !void {
+    const io = init.io;
     // Setup stdout for printing
     var stdout_buffer: [1024]u8 = undefined;
-    var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+    var stdout_writer = std.Io.File.stdout().writer(io, &stdout_buffer);
     const stdout = &stdout_writer.interface;
 
     try stdout.print("PCG to SysEx Converter\n---\n", .{});
@@ -48,8 +54,7 @@ pub fn main() !void {
     const allocator = arena.allocator();
 
     // Parse command-line arguments
-    const args = try std.process.argsAlloc(allocator);
-    defer std.process.argsFree(allocator, args);
+    const args = try init.minimal.args.toSlice(init.arena.allocator());
 
     const input_file = if (args.len > 1) args[1] else {
         try stdout.print("Usage: pcg2syx <input_file.pcg> [synth_model|n364]\n", .{});
@@ -62,7 +67,7 @@ pub fn main() !void {
     std.log.info("Starting conversion for file: {s}", .{input_file});
 
     // Read the input file
-    const data = readFile(allocator, input_file) catch |err| {
+    const data = readFile(io, allocator, input_file) catch |err| {
         std.process.fatal("Failed to read input file: {}", .{err});
     };
     defer allocator.free(data);
@@ -101,7 +106,7 @@ pub fn main() !void {
         defer allocator.free(file_name);
         const extracted_data = try pcg2syx.collectData(allocator, cat, data);
         defer allocator.free(extracted_data);
-        try pcg2syx.createSysexFile(file_name, @intFromEnum(cat.sysex_header), extracted_data);
+        try pcg2syx.createSysexFile(io, file_name, @intFromEnum(cat.sysex_header), extracted_data);
     }
 
     std.log.info("Conversion completed successfully.", .{});
@@ -115,21 +120,23 @@ test "tests:beforeAll" {
 }
 
 test "readFile functionality" {
+    const io = std.testing.io;
     const allocator = std.testing.allocator;
-    const data = try readFile(allocator, "X3_PLOAD.PCG");
+    const data = try readFile(io, allocator, "X3_PLOAD.PCG");
     defer allocator.free(data);
     try std.testing.expect(data.len > 0);
 }
 
-test "verify combi.syx integrity" {
+test "verify Combi.syx integrity" {
+    const io = std.testing.io;
     const REF_COMBI_SHA1 = "4fbbe1276e0178912724e4e15e08dba9fc6cea88";
     const TEST_FILE = "Combi.syx";
     const allocator = std.testing.allocator;
 
-    const r_buf: []u8 = undefined;
-    const f = try std.fs.cwd().openFile(TEST_FILE, .{ .mode = .read_only });
-    defer f.close();
-    var reader = f.reader(r_buf);
+    var r_buf: [4096]u8 = undefined;
+    const f = try std.Io.Dir.cwd().openFile(io, TEST_FILE, .{ .mode = .read_only });
+    defer f.close(io);
+    var reader = f.reader(io, &r_buf);
     const data = try reader.interface.readAlloc(allocator, try reader.getSize());
     defer allocator.free(data);
 

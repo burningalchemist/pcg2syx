@@ -211,22 +211,25 @@ pub fn collectData(allocator: anytype, category: CategoryData, src: []u8) ![]u8 
 }
 
 // Create a SysEx file with the given data and type
-pub fn createSysexFile(filename: []const u8, fileType: u8, data: []const u8) !void {
+pub fn createSysexFile(io: std.Io, filename: []const u8, fileType: u8, data: []const u8) !void {
     // assert data is not empty
     if (data.len == 0) {
         std.log.err("No data provided for SysEx file: {s}\n", .{filename});
         return;
     }
 
-    var file = std.fs.cwd().createFile(filename, .{}) catch {
+    var file = std.Io.Dir.cwd().createFile(io, filename, .{}) catch {
         std.log.err("SysEx file could not be created: {s}\n", .{filename});
         return;
     };
-    defer file.close();
+    defer file.close(io);
 
     var sysexHeader = HEADER;
     sysexHeader[4] = fileType;
-    _ = try file.write(&sysexHeader);
+
+    var w_buf: [4096]u8 = undefined;
+    var writer = file.writerStreaming(io, &w_buf);
+    _ = try writer.interface.write(&sysexHeader);
 
     const allocator = std.heap.page_allocator;
     const convertedData = encodeSysex(allocator, data) catch {
@@ -235,8 +238,10 @@ pub fn createSysexFile(filename: []const u8, fileType: u8, data: []const u8) !vo
     };
     defer allocator.free(convertedData);
 
-    _ = try file.write(convertedData);
-    _ = try file.write(&[_]u8{FOOTER});
+    var footer = [_]u8{FOOTER};
+    _ = try writer.interface.write(convertedData);
+    _ = try writer.interface.write(&footer);
+    try writer.flush();
 
     std.log.info("SysEx file created: {s}", .{filename});
 }
