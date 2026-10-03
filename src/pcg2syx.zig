@@ -293,7 +293,7 @@ test "extractGlobal functionality" {
 
 test "extractDrums functionality" {
     const allocator = std.testing.allocator;
-    var input = [_]u8{0} ** 5280;
+    var input: [5280]u8 = @splat(0);
 
     // Iteration 0: bytes 0,2,3,5,6,8,9 should become output bytes 0-6
     input[0] = 0x11;
